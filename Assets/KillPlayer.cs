@@ -10,7 +10,7 @@ public class KillPlayer : MonoBehaviour
     {
         if (other.tag == "Player")
         {
-
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
     }
 }

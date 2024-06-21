@@ -36,7 +36,7 @@ public class InputManager : MonoBehaviour
     {
         return $"<b><color=#ff0000ff>{_interactionKey}</color></b>";
     }
-    public static void ResetInputManager()
+    public void OnDestroy()
     {
         mouseInputActions.Clear();
         moveInputActions.Clear();
@@ -46,6 +46,7 @@ public class InputManager : MonoBehaviour
         scrollWheelInputActions.Clear();
         interactionInputActions.Clear();
         alphaNumericKeyInputActions.Clear();
+        jumpInputActions.Clear();
     }
 
     void Update()
