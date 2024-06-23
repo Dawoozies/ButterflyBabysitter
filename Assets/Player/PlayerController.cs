@@ -47,9 +47,14 @@ public class PlayerController : MonoBehaviour
     public float jumpLerpSpeed;
     float jump_t;
 
+    public float flightTimeMax;
     public float flightTime;
     public int jumpsLeft;
-    int jumps = 4;
+    public int jumps = 1;
+
+    public float glideInput;
+    public float glideGravityReduction;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -63,11 +68,20 @@ public class PlayerController : MonoBehaviour
     }
     void JumpInputHandler(bool jumpDownThisFrame, bool jumpHeld, bool jumpUpThisFrame)
     {
-        if(!jumping && jumpHeld && (groundedState == GroundedState.Enter || groundedState == GroundedState.Stay))
+        if(jumpDownThisFrame && jumpsLeft > 0 && jumpHeld)
         {
-            jumping = true;
             jump_t = 0f;
+            jumpsLeft--;
         }
+        if(jumpHeld)
+        {
+            glideInput += Time.deltaTime;
+        }
+        else
+        {
+            glideInput -= Time.deltaTime*4f;
+        }
+        glideInput = Mathf.Clamp01(glideInput);
     }
     void CameraRotationHandler(Vector2 mouseScreenPos, Vector2 mouseWorldPos, Vector2 mouseDelta)
     {
@@ -96,13 +110,9 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if(jumping)
+        if(jump_t < 1)
         {
-            jump_t += Time.deltaTime*jumpLerpSpeed;
-            if(jump_t > 1)
-            {
-                jumping = false;
-            }
+            jump_t += Time.deltaTime * jumpLerpSpeed;
         }
 
         if(groundedState == GroundedState.Falling && flightTime <= 0)
@@ -112,6 +122,11 @@ public class PlayerController : MonoBehaviour
         else
         {
             rb.drag = drag;
+        }
+
+        if(flightTime > 0)
+        {
+            flightTime -= Time.deltaTime;
         }
     }
 
@@ -135,15 +150,12 @@ public class PlayerController : MonoBehaviour
         movementVelocity.y = 0f;
         finalVelocity += movementVelocity;
 
-        if(groundedState == GroundedState.Falling)
+        if(groundedState == GroundedState.Falling && jump_t >= 1)
         {
-            finalVelocity += gravity * Time.fixedDeltaTime;
+            finalVelocity += (gravity * Time.fixedDeltaTime) * (Mathf.Lerp(1f, glideGravityReduction, glideInput));
         }
 
-        if(jumping)
-        {
-            finalVelocity += jumpVelocity * jumpCurve.Evaluate(jump_t) * Time.fixedDeltaTime;
-        }
+        finalVelocity += jumpVelocity * jumpCurve.Evaluate(jump_t) * Time.fixedDeltaTime;
 
         if (flightTime > 0)
         {
@@ -176,16 +188,24 @@ public class PlayerController : MonoBehaviour
     {
         if (col.collider.tag == "Ground")
         {
-            groundedState = GroundedState.Enter;
-            groundExitTimer = 0f;
+            if(Physics.Raycast(transform.position, Vector3.down, 1.05f, groundLayerMask))
+            {
+                groundedState = GroundedState.Enter;
+                groundExitTimer = 0f;
+                jumpsLeft = jumps;
+            }
         }
     }
     private void OnCollisionStay(Collision col)
     {
         if (col.collider.tag == "Ground")
         {
-            groundedState = GroundedState.Stay;
-            groundExitTimer = 0f;
+            if (Physics.Raycast(transform.position, Vector3.down, 1.05f, groundLayerMask))
+            {
+                groundedState = GroundedState.Stay;
+                groundExitTimer = 0f;
+                jumpsLeft = jumps;
+            }
         }
     }
     private void OnCollisionExit(Collision col)
@@ -198,6 +218,7 @@ public class PlayerController : MonoBehaviour
     public void ActivateFlight(float flightTime)
     {
         this.flightTime = flightTime;
+        flightTimeMax = flightTime;
     }
 }
 public enum GroundedState

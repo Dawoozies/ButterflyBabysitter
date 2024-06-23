@@ -38,6 +38,7 @@ public class GameManager : MonoBehaviour
     }
     public void SaveButterfly()
     {
+        playerController.jumps++;
         butterfliesLeft--;
     }
     public void RegisterButterfly()
