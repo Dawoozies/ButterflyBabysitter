@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 public class PlayerController : MonoBehaviour
@@ -32,9 +31,25 @@ public class PlayerController : MonoBehaviour
 
     private Rigidbody rb;
     public LayerMask groundLayerMask;
-    private Vector3 g;
     private bool jump;
     private bool applyGravity;
+
+    public float drag;
+    Vector2 moveInput;
+    Vector3 finalVelocity;
+    public Vector3 gravity;
+    public Vector3 jumpVelocity;
+    public GroundedState groundedState = GroundedState.Falling;
+    public float groundExitTime;
+    float groundExitTimer;
+
+    bool jumping;
+    public float jumpLerpSpeed;
+    float jump_t;
+
+    public float flightTime;
+    public int jumpsLeft;
+    int jumps = 4;
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -48,9 +63,10 @@ public class PlayerController : MonoBehaviour
     }
     void JumpInputHandler(bool jumpDownThisFrame, bool jumpHeld, bool jumpUpThisFrame)
     {
-        if (jumpDownThisFrame)
+        if(!jumping && jumpHeld && (groundedState == GroundedState.Enter || groundedState == GroundedState.Stay))
         {
-            rb.AddForce(jumpDir*jumpMaxVelocity, ForceMode.Impulse);
+            jumping = true;
+            jump_t = 0f;
         }
     }
     void CameraRotationHandler(Vector2 mouseScreenPos, Vector2 mouseWorldPos, Vector2 mouseDelta)
@@ -63,64 +79,84 @@ public class PlayerController : MonoBehaviour
     }
     void CharacterMovementHandler(Vector2 moveInput, bool sprintInput)
     {
-        float finalMoveSpeed = moveSpeed;
+        this.moveInput = moveInput;
         this.sprintInput = sprintInput;
-        if(sprintInput)
+    }
+    void Update()
+    {
+        if(groundedState == GroundedState.Exit)
         {
-            finalMoveSpeed *= sprintMultiplier;
+            if(groundExitTimer < groundExitTime)
+            {
+                groundExitTimer += Time.deltaTime;
+            }
+            else
+            {
+                groundedState = GroundedState.Falling;
+            }
         }
+
+        if(jumping)
+        {
+            jump_t += Time.deltaTime*jumpLerpSpeed;
+            if(jump_t > 1)
+            {
+                jumping = false;
+            }
+        }
+
+        if(groundedState == GroundedState.Falling && flightTime <= 0)
+        {
+            rb.drag = 0f;
+        }
+        else
+        {
+            rb.drag = drag;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        finalVelocity = Vector3.zero;
+
         Vector3 projForward = cameraPivot.forward;
         projForward.y = 0f;
         projForward.Normalize();
         Vector3 projRight = cameraPivot.right;
         projRight.y = 0f;
         projRight.Normalize();
-        Vector3 v = (projForward * moveInput.y + projRight * moveInput.x) * finalMoveSpeed;
-        
-        Vector3 dv = v * Time.deltaTime;
-        dv.y = 0;
-        rb.AddForce(dv, ForceMode.VelocityChange);
-        _lastFinalMoveSpeed = v.magnitude;
-    }
-    void Update()
-    {
-        applyGravity = !GroundedCheck();
-        Vector3 absMovement = transform.position - lastFramePos;
-        float absMovementMagnitude = absMovement.magnitude;
-        //Debug.LogError($"absMovement = {absMovement} || magnitude = {absMovement.magnitude}");
-        if(absMovementMagnitude > 0)
+        float finalSpeed = moveSpeed;
+        if(sprintInput)
         {
-            float stepLoudnessMultiplier = 1f;
+            finalSpeed *= sprintMultiplier;
+        }
+        Vector3 movementVelocity = (projForward * moveInput.y + projRight * moveInput.x) * Time.fixedDeltaTime * finalSpeed;
+
+        movementVelocity.y = 0f;
+        finalVelocity += movementVelocity;
+
+        if(groundedState == GroundedState.Falling)
+        {
+            finalVelocity += gravity * Time.fixedDeltaTime;
+        }
+
+        if(jumping)
+        {
+            finalVelocity += jumpVelocity * jumpCurve.Evaluate(jump_t) * Time.fixedDeltaTime;
+        }
+
+        if (flightTime > 0)
+        {
             if(sprintInput)
             {
-                stepLoudnessMultiplier = 2f;
-                step += Time.deltaTime * sprintStepSpeed;
+                finalVelocity = cameraPivot.forward * moveSpeed * sprintMultiplier;
             }
             else
             {
-                step += Time.deltaTime * stepSpeed;
-            }
-
-            if(step >= 1)
-            {
-                onStepTaken?.Invoke(stepLoudnessMultiplier);
-                step = 0f;
+                finalVelocity = cameraPivot.forward * moveSpeed;
             }
         }
-        lastFramePos = transform.position;
-    }
-
-    private void FixedUpdate()
-    {
-        if (applyGravity)
-        {
-            g += Vector3.down;
-            rb.AddForce(g*Time.deltaTime, ForceMode.Impulse);
-        }
-        else
-        {
-            g = Vector3.zero;
-        }
+        rb.AddForce(finalVelocity, ForceMode.VelocityChange);
     }
 
     public void RotateCamera(Vector2 screenMoveDelta)
@@ -136,9 +172,39 @@ public class PlayerController : MonoBehaviour
     {
         return Mathf.InverseLerp(0f, moveSpeed*sprintMultiplier, _lastFinalMoveSpeed);
     }
-
-    public bool GroundedCheck()
+    private void OnCollisionEnter(Collision col)
     {
-        return Physics.Raycast(transform.position, Vector3.down, 1.1f, groundLayerMask);
+        if (col.collider.tag == "Ground")
+        {
+            groundedState = GroundedState.Enter;
+            groundExitTimer = 0f;
+        }
     }
+    private void OnCollisionStay(Collision col)
+    {
+        if (col.collider.tag == "Ground")
+        {
+            groundedState = GroundedState.Stay;
+            groundExitTimer = 0f;
+        }
+    }
+    private void OnCollisionExit(Collision col)
+    {
+        if(col.collider.tag == "Ground")
+        {
+            groundedState = GroundedState.Exit;
+        }
+    }
+    public void ActivateFlight(float flightTime)
+    {
+        this.flightTime = flightTime;
+    }
+}
+public enum GroundedState
+{
+    Falling, Enter, Stay, Exit
+}
+public enum JumpInputState
+{
+    Down, Held, Up
 }
