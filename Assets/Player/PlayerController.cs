@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
     public float yRotationLimit;
     public float moveSpeed;
     public float sprintMultiplier;
+    public float flightSpeed;
     bool sprintInput;
     Vector2 angles;
 
@@ -161,11 +162,11 @@ public class PlayerController : MonoBehaviour
         {
             if(sprintInput)
             {
-                finalVelocity = cameraPivot.forward * moveSpeed * sprintMultiplier;
+                finalVelocity = cameraPivot.forward * flightSpeed * sprintMultiplier;
             }
             else
             {
-                finalVelocity = cameraPivot.forward * moveSpeed;
+                finalVelocity = cameraPivot.forward * flightSpeed;
             }
         }
         rb.AddForce(finalVelocity, ForceMode.VelocityChange);

@@ -876,10 +876,10 @@ RectTransform:
   - {fileID: 1711582665}
   m_Father: {fileID: 472733390}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 0.00012207031, y: 1279.3}
-  m_SizeDelta: {x: 0.00024414, y: 107.1173}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0.00012207031, y: -160.69995}
+  m_SizeDelta: {x: 0.00024414, y: 107.11731}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &423360034
 MonoBehaviour:
@@ -1188,6 +1188,7 @@ MonoBehaviour:
   yRotationLimit: 72
   moveSpeed: 30
   sprintMultiplier: 4
+  flightSpeed: 5
   stepSpeed: 20
   sprintStepSpeed: 15
   onStepTaken:
@@ -3720,10 +3721,10 @@ RectTransform:
   - {fileID: 728277820}
   m_Father: {fileID: 472733390}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -0.00012207031, y: 1386.4}
-  m_SizeDelta: {x: 0.00024414, y: 107.1173}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -0.00012207031, y: -53.599976}
+  m_SizeDelta: {x: 0.00024414, y: 107.11731}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &971766799
 MonoBehaviour:
@@ -5436,7 +5437,7 @@ MonoBehaviour:
   onInteractStop:
     m_PersistentCalls:
       m_Calls: []
-  flightTime: 5
+  flightTime: 7
 --- !u!1 &1807635768
 GameObject:
   m_ObjectHideFlags: 0
